@@ -537,6 +537,13 @@ void draw_settings_dialog(GuiState &gui, EmuEnvState &emuenv) {
                 ImGui::SetTooltip("Speed hack, check the box to disable surface syncing between CPU and GPU.\nSurface syncing is needed by a few games.\nGives a big performance boost if disabled (in particular when upscaling is on).");
         }
 
+        if(emuenv.renderer->support_memory_mapping){
+            ImGui::Checkbox("Enable memory mapping (reboot required)", &emuenv.cfg.memory_mapping);
+            if (ImGui::IsItemHovered()){
+                ImGui::SetTooltip("Memory mapping improved performances, reduces memory usage and fixes many graphical issues.\nHowever, it may be unstable on some GPUs");
+            }
+        }
+
         // Anti-aliasing FXAA
         ImGui::Spacing();
         ImGui::Checkbox("Enable anti-aliasing (FXAA)", &config.enable_fxaa);

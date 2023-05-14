@@ -381,6 +381,7 @@ bool VKState::create(SDL_Window *window, std::unique_ptr<renderer::State> &state
         }
 
         features.support_memory_mapping = true;
+        
         if (support_buffer_device_address) {
             auto features = physical_device.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceBufferDeviceAddressFeatures>();
             support_buffer_device_address &= static_cast<bool>(features.get<vk::PhysicalDeviceBufferDeviceAddressFeatures>().bufferDeviceAddress);
@@ -412,7 +413,10 @@ bool VKState::create(SDL_Window *window, std::unique_ptr<renderer::State> &state
             }
         }
 
-        if (features.support_memory_mapping)
+        // Load memory mapping state from config
+        features.enable_memory_mapping = config.memory_mapping;
+
+        if (features.enable_memory_mapping)
             LOG_INFO("Memory mapping is enabled");
 
         if (physical_device_properties.vendorID == 4318) {
@@ -445,7 +449,7 @@ bool VKState::create(SDL_Window *window, std::unique_ptr<renderer::State> &state
         device_info.get().setQueueCreateInfos(queue_infos);
         device_info.get().setPEnabledExtensionNames(device_extensions);
 
-        if (!features.support_memory_mapping) {
+        if (!features.enable_memory_mapping) {
             device_info.unlink<vk::PhysicalDeviceBufferDeviceAddressFeatures>();
             device_info.unlink<vk::PhysicalDeviceUniformBufferStandardLayoutFeatures>();
         }
@@ -502,7 +506,7 @@ bool VKState::create(SDL_Window *window, std::unique_ptr<renderer::State> &state
         if (support_dedicated_allocations)
             allocator_info.flags |= vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation;
 
-        if (features.support_memory_mapping)
+        if (features.enable_memory_mapping)
             allocator_info.flags |= vma::AllocatorCreateFlagBits::eBufferDeviceAddress;
 
         allocator = vma::createAllocator(allocator_info);
@@ -646,7 +650,7 @@ void VKState::set_linear_filter(bool enable_linear_filter) {
 }
 
 bool VKState::map_memory(MemState &mem, Ptr<void> address, uint32_t size) {
-    assert(features.support_memory_mapping);
+    assert(features.enable_memory_mapping);
     // the adress should be 4K aligned
     assert((address.address() & 4095) == 0);
     constexpr vk::BufferUsageFlags mapped_memory_flags = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eTransferDst;
@@ -743,7 +747,7 @@ bool VKState::map_memory(MemState &mem, Ptr<void> address, uint32_t size) {
 }
 
 void VKState::unmap_memory(MemState &mem, Ptr<void> address) {
-    assert(features.support_memory_mapping);
+    assert(features.enable_memory_mapping);
 
     auto ite = mapped_memories.find(address.address());
     if (ite == mapped_memories.end()) {
